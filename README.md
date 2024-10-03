@@ -1,3 +1,7 @@
+#Peojectr Report for devops 
+#sem3 
+#Project deployment in Cloudbase involves hosting applications on cloud infrastructure, allowing for seamless scalability, flexibility, and cost-efficiency. It supports various platforms and services, ensuring high availability and automatic updates. Cloudbase simplifies resource management, enhancing performance, and enabling easy integration with third-party APIs for optimized cloud-based operations.
+
 1.Perform the following HDFS operations using appropriate commands:
 1.Upload a large text file from your local system to HDFS.
 2.List all the files in your HDFS directory.

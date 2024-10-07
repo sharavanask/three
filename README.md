@@ -4,742 +4,629 @@
 
 
 
-1. Neural Network Implementation
-
-program
-import numpy as np
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.metrics import accuracy_score
-iris = load_iris()
-X = iris.data
-y = iris.target.reshape(-1, 1)
-encoder = OneHotEncoder(sparse=False)
-y = encoder.fit_transform(y)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
-random_state=42)
-Department of Artificial Intelligence and Data Science
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-input_size = X_train.shape[1]
-hidden_size = 10
-output_size = y_train.shape[1]
-learning_rate = 0.01
-epochs = 1000
-W1 = np.random.randn(input_size, hidden_size)
-b1 = np.zeros((1, hidden_size))
-W2 = np.random.randn(hidden_size, output_size)
-b2 = np.zeros((1, output_size))
-def sigmoid(x):
- return 1 / (1 + np.exp(-x))
-def sigmoid_derivative(x):
- return x * (1 - x)
-for epoch in range(epochs):
- z1 = np.dot(X_train, W1) + b1
- a1 = sigmoid(z1)
- z2 = np.dot(a1, W2) + b2
- a2 = sigmoid(z2)
- loss = np.mean((a2 - y_train) ** 2)
- d_loss_a2 = 2 * (a2 - y_train) / y_train.shape[0]
- d_a2_z2 = sigmoid_derivative(a2)
- d_z2_W2 = a1
- d_z2_a1 = W2
- d_z2 = d_loss_a2 * d_a2_z2
- d_W2 = np.dot(d_z2_W2.T, d_z2)
- d_b2 = np.sum(d_z2, axis=0, keepdims=True)
- d_a1_z1 = sigmoid_derivative(a1)
- d_z1_W1 = X_train
- d_z1 = np.dot(d_z2, d_z2_a1.T) * d_a1_z1
- d_W1 = np.dot(d_z1_W1.T, d_z1)
- d_b1 = np.sum(d_z1, axis=0, keepdims=True)
- W2 -= learning_rate * d_W2
- b2 -= learning_rate * d_b2
- W1 -= learning_rate * d_W1
- b1 -= learning_rate * d_b1
- if epoch % 100 == 0:
- print(f'Epoch {epoch}, Loss: {loss}')
-z1 = np.dot(X_test, W1) + b1
-a1 = sigmoid(z1)
-z2 = np.dot(a1, W2) + b2
-a2 = sigmoid(z2)
-predictions = np.argmax(a2, axis=1)
-y_test_labels = np.argmax(y_test, axis=1)
-accuracy = accuracy_score(y_test_labels, predictions)
-print(f'Accuracy: {accuracy * 100:.2f}%')
-
-
-2. TensorFlow Basics
-
-program
-import tensorflow as tf
-from tensorflow.keras.datasets import mnist
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten
-from tensorflow.keras.utils import to_categorical
-from sklearn.metrics import accuracy_score
-(X_train, y_train), (X_test, y_test) = mnist.load_data()
-X_train = X_train / 255.0
-X_test = X_test / 255.0
-y_train = to_categorical(y_train, 10)
-y_test = to_categorical(y_test, 10)
-model = Sequential([
- Flatten(input_shape=(28, 28)),
- Dense(128, activation='relu'),
-Department of Artificial Intelligence and Data Science
- Dense(64, activation='relu'),
- Dense(10, activation='softmax')
-])
-model.compile(optimizer='adam',
- loss='categorical_crossentropy',
- metrics=['accuracy'])
-model.fit(X_train, y_train, epochs=10, batch_size=32,
-validation_split=0.2)
-test_loss, test_accuracy = model.evaluate(X_test, y_test)
-print(f'Test accuracy: {test_accuracy * 100:.2f}%')
-y_pred = model.predict(X_test)
-y_pred_classes = tf.argmax(y_pred, axis=1)
-y_true = tf.argmax(y_test, axis=1)
-accuracy = accuracy_score(y_true, y_pred_classes)
-print(f'Accuracy calculated using sklearn: {accuracy * 100:.2f}%')
-Output
-
-
-
-3. Building a CNN
-
-program
-import tensorflow as tf
-from tensorflow.keras.datasets import cifar10
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import EarlyStopping
-(X_train, y_train), (X_test, y_test) = cifar10.load_data()
-X_train = X_train / 255.0
-X_test = X_test / 255.0
-y_train = to_categorical(y_train, 10)
-y_test = to_categorical(y_test, 10)
-def build_and_compile_model(filter_size, stride, padding):
- model = Sequential([
- Conv2D(32, kernel_size=filter_size, strides=stride, padding=padding,
-activation='relu', input_shape=(32, 32, 3)),
-Department of Artificial Intelligence and Data Science
- MaxPooling2D(pool_size=(2, 2)),
- Conv2D(64, kernel_size=filter_size, strides=stride, padding=padding,
-activation='relu'),
- MaxPooling2D(pool_size=(2, 2)),
- Conv2D(128, kernel_size=filter_size, strides=stride, padding=padding,
-activation='relu'),
- Flatten(),
- Dense(128, activation='relu'),
- Dense(10, activation='softmax')
- ])
-
- model.compile(optimizer='adam',
- loss='categorical_crossentropy',
- metrics=['accuracy'])
- return model
-filter_sizes = [(3, 3), (5, 5)]
-strides = [(1, 1), (2, 2)]
-paddings = ['valid', 'same']
-for filter_size in filter_sizes:
- for stride in strides:
- for padding in paddings:
- print(f"\nExperimenting with filter_size={filter_size}, stride={stride},
-padding={padding}")
-
- model = build_and_compile_model(filter_size, stride, padding)
-
- early_stopping = EarlyStopping(monitor='val_loss', patience=3)
- history = model.fit(X_train, y_train, epochs=20, batch_size=64,
-validation_split=0.2, callbacks=[early_stopping], verbose=1)
-
- test_loss, test_accuracy = model.evaluate(X_test, y_test)
- print(f"Test accuracy: {test_accuracy * 100:.2f}%")
- model.summary()
-
-4. Improving CNN Performance
-
-program
-import tensorflow as tf
-from tensorflow.keras.datasets import cifar10
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense,
-Dropout, BatchNormalization
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.callbacks import EarlyStopping
-(X_train, y_train), (X_test, y_test) = cifar10.load_data()
-X_train = X_train / 255.0
-X_test = X_test / 255.0
-y_train = to_categorical(y_train, 10)
-Department of Artificial Intelligence and Data Science
-y_test = to_categorical(y_test, 10)
-datagen = ImageDataGenerator(
- rotation_range=20,
- width_shift_range=0.2,
- height_shift_range=0.2,
- horizontal_flip=True,
- fill_mode='nearest'
-)
-datagen.fit(X_train)
-def build_and_compile_model():
- model = Sequential([
- Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(32, 32,
-3)),
- BatchNormalization(),
- MaxPooling2D((2, 2)),
- Dropout(0.25),
- Conv2D(64, (3, 3), padding='same', activation='relu'),
- BatchNormalization(),
- MaxPooling2D((2, 2)),
- Dropout(0.25),
- Conv2D(128, (3, 3), padding='same', activation='relu'),
- BatchNormalization(),
- MaxPooling2D((2, 2)),
- Dropout(0.25),
- Flatten(),
- Dense(512, activation='relu'),
- Dropout(0.5),
- Dense(10, activation='softmax')
-Department of Artificial Intelligence and Data Science
- ])
- model.compile(optimizer='adam',
- loss='categorical_crossentropy',
- metrics=['accuracy'])
- return model
-model = build_and_compile_model()
-early_stopping = EarlyStopping(monitor='val_loss', patience=5,
-restore_best_weights=True)
-history = model.fit(datagen.flow(X_train, y_train, batch_size=64),
- epochs=50,
- validation_data=(X_test, y_test),
- callbacks=[early_stopping],
- verbose=1)
-test_loss, test_accuracy = model.evaluate(X_test, y_test)
-print(f'Test accuracy: {test_accuracy * 100:.2f}%')
-import matplotlib.pyplot as plt
-plt.figure(figsize=(12, 4))
-plt.subplot(1, 2, 1)
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('Model accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend(['Train', 'Validation'])
-plt.subplot(1, 2, 2)
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
-Department of Artificial Intelligence and Data Science
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend(['Train', 'Validation'])
-plt.show()
-
-
-5. RNN for sequence prediction using TensorFlow
-
-program
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Dense
-from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
-def generate_sine_wave(seq_length, num_samples):
- x = np.linspace(0, 2 * np.pi, seq_length)
-Department of Artificial Intelligence and Data Science
- data = np.sin(x)
- sequences = []
- for i in range(num_samples):
- start = np.random.randint(0, len(data) - seq_length)
- sequences.append(data[start:start + seq_length])
- return np.array(sequences)
-seq_length = 50
-num_samples = 1000
-num_epochs = 10
-batch_size = 32
-data = generate_sine_wave(seq_length, num_samples)
-X = data[:, :-1]
-y = data[:, -1]
-scaler = MinMaxScaler()
-X = scaler.fit_transform(X)
-y = scaler.transform(y.reshape(-1, 1)).flatten()
-X = X.reshape((num_samples, seq_length - 1, 1))
-model = Sequential([
- SimpleRNN(50, activation='relu', input_shape=(X.shape[1], 1)),
- Dense(1)
-])
-model.compile(optimizer='adam', loss='mse')
-model.fit(X, y, epochs=num_epochs, batch_size=batch_size)
-predictions = model.predict(X)
-y = scaler.inverse_transform(y.reshape(-1, 1)).flatten()
-predictions = scaler.inverse_transform(predictions).flatten()
-plt.figure(figsize=(12, 6))
-plt.plot(range(len(y)), y, label='True Values')
-Department of Artificial Intelligence and Data Science
-plt.plot(range(len(predictions)), predictions, label='Predicted Values')
-plt.legend()
-plt.show()
-Output
-
-
-6. LSTM network for text generation
-
-program
-import numpy as np
-import tensorflow as tf
-Department of Artificial Intelligence and Data Science
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-# Load and preprocess the text data
-def load_text(file_path):
- with open(file_path, 'r') as file:
- text = file.read().lower()
- return text
-def prepare_data(text, seq_length):
- tokenizer = Tokenizer(char_level=True)
- tokenizer.fit_on_texts([text])
- total_chars = len(tokenizer.word_index) + 1
- sequences = []
- next_chars = []
- for i in range(0, len(text) - seq_length, 1):
- seq = text[i:i + seq_length]
- label = text[i + seq_length]
- sequences.append([tokenizer.char_index[c] for c in seq])
- next_chars.append(tokenizer.char_index[label])
- X = np.array(sequences)
- y = np.array(next_chars)
- X = pad_sequences(X, maxlen=seq_length)
- y = to_categorical(y, num_classes=total_chars)
- return X, y, tokenizer, total_chars
-Department of Artificial Intelligence and Data Science
-def build_model(seq_length, total_chars):
- model = Sequential([
- LSTM(128, input_shape=(seq_length, total_chars),
-return_sequences=True),
- Dropout(0.2),
- LSTM(128),
- Dense(total_chars, activation='softmax')
- ])
- model.compile(loss='categorical_crossentropy', optimizer='adam',
-metrics=['accuracy'])
- return model
-def train_model(model, X, y, epochs=20, batch_size=128):
- model.fit(X, y, epochs=epochs, batch_size=batch_size, verbose=1)
-def generate_text(model, tokenizer, total_chars, seed_text, seq_length,
-num_chars):
- reverse_char_index = {i: char for char, i in tokenizer.char_index.items()}
- generated_text = seed_text
- for _ in range(num_chars):
- x_pred = pad_sequences([tokenizer.texts_to_sequences([seed_text])[0]],
-maxlen=seq_length)
- pred_probs = model.predict(x_pred, verbose=0)[0]
- next_index = np.argmax(pred_probs)
- next_char = reverse_char_index[next_index]
- generated_text += next_char
- seed_text = seed_text[1:] + next_char
- return generated_text
-def main():
- text = load_text('shakespeare.txt')
- seq_length = 40
-Department of Artificial Intelligence and Data Science
- X, y, tokenizer, total_chars = prepare_data(text, seq_length)
- model = build_model(seq_length, total_chars)
- train_model(model, X, y, epochs=20, batch_size=128)
- seed_text = text[:seq_length]
- generated_text = generate_text(model, tokenizer, total_chars, seed_text,
-seq_length, num_chars=400)
- print(generated_text)
-if __name__ == "__main__":
- main()
-Output
-Department of Artificial Intelligence and Data Science
-
-
-
-
-
-
-7. Q-learning algorithm to solve the FrozenLake environment
-
-program
-import gym
-import numpy as np
-env = gym.make('FrozenLake-v1', is_slippery=True, render_mode=None)
-learning_rate = 0.1
-discount_factor = 0.99
-epsilon = 1.0 # Exploration rate
-max_epsilon = 1.0
-min_epsilon = 0.01
-decay_rate = 0.005 # Decay rate for exploration probability
-state_size = env.observation_space.n
-action_size = env.action_space.n
-Department of Artificial Intelligence and Data Science
-q_table = np.zeros((state_size, action_size))
-num_episodes = 10000
-max_steps = 100
-for episode in range(num_episodes):
- state = env.reset()[0]
- done = False
- for step in range(max_steps):
- if np.random.uniform(0, 1) < epsilon:
- action = env.action_space.sample() # Explore
- else:
- action = np.argmax(q_table[state, :]) # Exploit
- new_state, reward, done, truncated, info = env.step(action)
- q_table[state, action] = q_table[state, action] + learning_rate * (
- reward + discount_factor * np.max(q_table[new_state, :]) -
-q_table[state, action])
- state = new_state
- if done:
- break
- epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate *
-episode)
-num_test_episodes = 100
-total_rewards = 0
-for episode in range(num_test_episodes):
- state = env.reset()[0]
- done = False
- episode_rewards = 0
- for step in range(max_steps):
- action = np.argmax(q_table[state, :]) # Choose best action
-Department of Artificial Intelligence and Data Science
- new_state, reward, done, truncated, info = env.step(action)
- episode_rewards += reward
- state = new_state
- if done:
- break
- total_rewards += episode_rewards
-print(f"Average reward over {num_test_episodes} test episodes: {total_rewards
-/ num_test_episodes}")
-env.close()
-Output
-Department of Artificial Intelligence and Data Science
-
-8. Q-values in a Deep Q-Network (DQN)
-
-program
-
-import gym
-import numpy as np
-import random
-from collections import deque
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
-EPISODES = 1000
-STATE_SIZE = 4
-ACTION_SIZE = 2
-GAMMA = 0.95
-EPSILON = 1.0
-EPSILON_MIN = 0.01
-EPSILON_DECAY = 0.995
-LEARNING_RATE = 0.001
-BATCH_SIZE = 32
-MEMORY_SIZE = 2000
-TARGET_UPDATE = 10
-class DQNAgent:
- def __init__(self):
- self.memory = deque(maxlen=MEMORY_SIZE)
- self.epsilon = EPSILON
- self.model = self._build_model()
- self.target_model = self._build_model()
-Department of Artificial Intelligence and Data Science
- self.update_target_model()
- def _build_model(self):
- model = Sequential()
- model.add(Dense(24, input_dim=STATE_SIZE, activation='relu'))
- model.add(Dense(24, activation='relu'))
- model.add(Dense(ACTION_SIZE, activation='linear'))
- model.compile(loss='mse',
-optimizer=Adam(learning_rate=LEARNING_RATE))
- return model
- def update_target_model(self):
- self.target_model.set_weights(self.model.get_weights())
- def remember(self, state, action, reward, next_state, done):
- self.memory.append((state, action, reward, next_state, done))
- def act(self, state):
- if np.random.rand() <= self.epsilon:
- return random.randrange(ACTION_SIZE)
- q_values = self.model.predict(state)
- return np.argmax(q_values[0])
- def replay(self):
- if len(self.memory) < BATCH_SIZE:
- return
- minibatch = random.sample(self.memory, BATCH_SIZE)
- for state, action, reward, next_state, done in minibatch:
- target = self.model.predict(state)
- if done:
- target[0][action] = reward
- else:
- t = self.target_model.predict(next_state)
-Department of Artificial Intelligence and Data Science
- target[0][action] = reward + GAMMA * np.amax(t[0])
- self.model.fit(state, target, epochs=1, verbose=0)
- if self.epsilon > EPSILON_MIN:
- self.epsilon *= EPSILON_DECAY
- def load(self, name):
- self.model.load_weights(name)
- def save(self, name):
- self.model.save_weights(name)
-if __name__ == "__main__":
- env = gym.make('CartPole-v1')
- agent = DQNAgent()
- done = False
- for e in range(EPISODES):
- state = env.reset()
- state = np.reshape(state, [1, STATE_SIZE])
- for time in range(500):
- action = agent.act(state)
- next_state, reward, done, _ = env.step(action)
- reward = reward if not done else -10
- next_state = np.reshape(next_state, [1, STATE_SIZE])
- agent.remember(state, action, reward, next_state, done)
- state = next_state
- if done:
- agent.update_target_model()
- print(f"Episode: {e}/{EPISODES}, score: {time}, epsilon:
-{agent.epsilon:.2}")
- break
- agent.replay()
-
-9. Policy gradient method (REINFORCE) to solve the LunarLander
-environment
-
-program
-
-import gym
-import numpy as np
-Department of Artificial Intelligence and Data Science
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
-EPISODES = 1000
-LEARNING_RATE = 0.001
-GAMMA = 0.99
-class REINFORCEAgent:
- def __init__(self, state_size, action_size):
- self.state_size = state_size
- self.action_size = action_size
- self.model = self._build_model()
- self.optimizer = Adam(learning_rate=LEARNING_RATE)
- def _build_model(self):
- model = Sequential()
- model.add(Dense(24, input_dim=self.state_size, activation='relu'))
- model.add(Dense(24, activation='relu'))
- model.add(Dense(self.action_size, activation='softmax'))
- return model
- def choose_action(self, state):
- state = state[np.newaxis, :]
- probabilities = self.model.predict(state, verbose=0)[0]
- return np.random.choice(self.action_size, p=probabilities)
- def compute_discounted_rewards(self, rewards):
- discounted_rewards = np.zeros_like(rewards, dtype=np.float32)
- cumulative_reward = 0
-Department of Artificial Intelligence and Data Science
- for t in reversed(range(len(rewards))):
- cumulative_reward = rewards[t] + GAMMA * cumulative_reward
- discounted_rewards[t] = cumulative_reward
- return discounted_rewards
- def train(self, states, actions, discounted_rewards):
- with tf.GradientTape() as tape:
- action_probs = self.model(states, training=True)
- action_indices = tf.range(tf.shape(actions)[0]) * self.action_size + actions
- selected_action_probs = tf.gather(tf.reshape(action_probs, [-1]),
-action_indices)
- loss = -tf.reduce_mean(tf.math.log(selected_action_probs) *
-discounted_rewards)
- gradients = tape.gradient(loss, self.model.trainable_variables)
- self.optimizer.apply_gradients(zip(gradients,
-self.model.trainable_variables))
-if __name__ == "__main__":
- env = gym.make('LunarLander-v2')
- state_size = env.observation_space.shape[0]
- action_size = env.action_space.n
- agent = REINFORCEAgent(state_size, action_size)
- for episode in range(EPISODES):
- state = env.reset()
- states, actions, rewards = [], [], []
- while True:
- action = agent.choose_action(state)
- next_state, reward, done, _ = env.step(action)
- states.append(state)
-Department of Artificial Intelligence and Data Science
- actions.append(action)
- rewards.append(reward)
- state = next_state
- if done:
- states = np.array(states)
- actions = np.array(actions)
- discounted_rewards = agent.compute_discounted_rewards(rewards)
- discounted_rewards -= np.mean(discounted_rewards)
- discounted_rewards /= np.std(discounted_rewards) + 1e-8
- agent.train(states, actions, discounted_rewards)
- print(f"Episode: {episode + 1}, Reward: {sum(rewards)}")
- break
- env.close()
-
-10.Imitation learning to train an autonomous vehicle agent
-
-program
-
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-from sklearn.model_selection import train_test_split
-def load_data():
- num_samples = 10000
- state_dim = 10 # Example state dimensions (e.g., sensor readings)
- action_dim = 3 # Example action dimensions (e.g., steer, throttle, brake)
- states = np.random.rand(num_samples, state_dim)
- actions = np.random.rand(num_samples, action_dim)
- return states, actions
-Department of Artificial Intelligence and Data Science
-def build_model(state_dim, action_dim):
- model = Sequential()
- model.add(Dense(64, input_dim=state_dim, activation='relu'))
- model.add(Dropout(0.1))
- model.add(Dense(64, activation='relu'))
- model.add(Dense(action_dim, activation='linear'))
- model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
- return model
-if __name__ == "__main__":
- states, actions = load_data()
- states_train, states_val, actions_train, actions_val = train_test_split(states,
-actions, test_size=0.2, random_state=42)
- model = build_model(states.shape[1], actions.shape[1])
- model.fit(states_train, actions_train, validation_data=(states_val, actions_val),
-epochs=50, batch_size=32)
- loss = model.evaluate(states_val, actions_val)
- print(f"Validation Loss: {loss}")
- new_state = np.random.rand(1, states.shape[1]) # Dummy state
- predicted_action = model.predict(new_state)
- print(f"Predicted Action: {predicted_action}")
-Department of Artificial Intelligence and Data Science
-
-11.Simplified version of ChaufferNet
-
-program
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout
-from tensorflow.keras.optimizers import Adam
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-def load_data():
- num_samples = 1000
- img_height, img_width, img_channels = 64, 64, 3 
-Department of Artificial Intelligence and Data Science
-features = np.random.rand(num_samples, img_height, img_width,
-img_channels)
- steering_angles = np.random.rand(num_samples) * 2 - 1 # Range [-1, 1]
- return features, steering_angles
-def build_model(input_shape):
- model = Sequential()
- model.add(Conv2D(24, (5, 5), strides=(2, 2), activation='relu',
-input_shape=input_shape))
- model.add(Dropout(0.2))
- model.add(Conv2D(36, (5, 5), strides=(2, 2), activation='relu'))
- model.add(Dropout(0.2))
- model.add(Conv2D(48, (5, 5), strides=(2, 2), activation='relu'))
- model.add(Dropout(0.2))
- model.add(Flatten())
- model.add(Dense(100, activation='relu'))
- model.add(Dropout(0.2))
- model.add(Dense(50, activation='relu'))
- model.add(Dense(10, activation='relu'))
- model.add(Dense(1))
- model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
- return model
-if __name__ == "__main__":
- features, steering_angles = load_data()
- features_train, features_val, angles_train, angles_val =
-train_test_split(features, steering_angles, test_size=0.2, random_state=42)
- input_shape = features_train.shape[1:]
- model = build_model(input_shape)
- model.fit(features_train, angles_train, validation_data=(features_val,
-angles_val), epochs=10, batch_size=32)
-Department of Artificial Intelligence and Data Science
- loss = model.evaluate(features_val, angles_val)
- print(f"Validation Loss: {loss}")
- new_feature = np.random.rand(1, *input_shape)
- predicted_angle = model.predict(new_feature)
- print(f"Predicted Steering Angle: {predicted_angle[0][0]}")
-
-
-
-
-12.End-to-End Deep Learning for Autonomous Driving
-
-program
-
-import os
-import numpy as np
-import cv2
-import csv
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, Flatten, Dense, Lambda,
-Dropout
-from tensorflow.keras.optimizers import Adam
-from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
-def load_data(data_dir):
- images = []
- steering_angles = []
- with open(os.path.join(data_dir, 'driving_log.csv')) as csvfile:
- reader = csv.reader(csvfile)
- next(reader) 
-Department of Artificial Intelligence and Data Science
- for line in reader:
-center_image_path = os.path.join(data_dir, 'IMG', line[0].split('/')[-1])
- center_image = cv2.imread(center_image_path)
- center_image = cv2.cvtColor(center_image, cv2.COLOR_BGR2RGB)
- center_image = cv2.resize(center_image, (200, 66))
- images.append(center_image)
- steering_angles.append(float(line[3])) # Steering angle
- return np.array(images), np.array(steering_angles)
-def build_model(input_shape):
- model = Sequential()
- model.add(Lambda(lambda x: x / 255.0 - 0.5,
-input_shape=input_shape))
- model.add(Conv2D(24, (5, 5), strides=(2, 2), activation='relu'))
- model.add(Conv2D(36, (5, 5), strides=(2, 2), activation='relu'))
- model.add(Conv2D(48, (5, 5), strides=(2, 2), activation='relu'))
- model.add(Conv2D(64, (3, 3), activation='relu'))
- model.add(Conv2D(64, (3, 3), activation='relu'))
- model.add(Flatten())
- model.add(Dense(100, activation='relu'))
- model.add(Dropout(0.5))
- model.add(Dense(50, activation='relu'))
- model.add(Dense(10, activation='relu'))
- model.add(Dense(1)) # Output layer for steering angle
- model.compile(optimizer=Adam(learning_rate=0.0001), loss='mse')
- return model
-if __name__ == "__main__":
-Department of Artificial Intelligence and Data Science
- data_dir = 'path_to_simulator_data' # Replace with your data directory
- images, steering_angles = load_data(data_dir)
- X_train, X_val, y_train, y_val = train_test_split(images,
-steering_angles, test_size=0.2, random_state=42)
- input_shape = X_train.shape[1:]
- model = build_model(input_shape)
- model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10,
-batch_size=32, shuffle=True)
- loss = model.evaluate(X_val, y_val)
- print(f"Validation Loss: {loss}")
- model.save('autonomous_driving_model.h5')
- new_image = np.expand_dims(X_val[0], axis=0)
- predicted_angle = model.predict(new_image)
- print(f"Predicted Steering Angle: {predicted_angle[0][0]}")
+Lab Practical: Create Maven Build Pipeline in Azure
+Aim
+This lab aims to create a continuous integration and continuous delivery (CI/CD) pipeline in Azure
+DevOps to automate the build process for a Maven project.
+Procedure
+1. Create an Azure DevOps Project (if you don't have one already):
+o Sign in to your Azure DevOps account and navigate to "Organizations" -> "[Your
+Organization Name]".
+o Click on "New project" and choose a name for your project.
+2. Define the Maven Project (Locally):
+o You can use an existing Maven project or create a sample project using Maven
+Archetypes (https://maven.apache.org/archetypes/index.html).
+o Ensure you have a pom.xml file configured with your project dependencies and build
+tasks.
+3. Connect your Code Repository (Optional):
+o If your code resides in a version control system like Git, connect the repository to
+your Azure DevOps project. You can use services like GitHub, Azure Repos, etc.
+4. Create a CI/CD Pipeline:
+o Go to "Pipelines" -> "Pipelines" and select "New pipeline".
+o Choose "Starter pipeline" and select your code repository (if applicable) or "Empty
+job".
+5. Configure the Pipeline YAML:
+o Edit the YAML script for your pipeline. Here's an example:
+YAML
+pool:
+ vmImage: 'ubuntu-latest' # Adjust VM image if needed
+stages:
+- stage: Build
+ jobs:
+ - job: Build_Job
+ steps:
+ - task: Maven@3 # Use the appropriate Maven version task
+ inputs:
+ mavenVersion: '3.x' # Specify your Maven version
+ mavenPomFile: 'pom.xml' # Path to your pom.xml file
+ goals: 'clean package' # Maven goals to execute (clean and package)
+ publishMavenArtifacts: true # Optionally publish artifacts
+* Explanation:
+ * `pool` defines the virtual machine image used for the pipeline execution.
+ * `stages` define the pipeline stages (e.g., Build).
+ * `jobs` define the jobs within a stage (e.g., Build_Job).
+ * `task` specifies the "Maven@3" task to use.
+ * `inputs` configure the task with Maven version, pom.xml location, build
+goals, and optionally publishing artifacts.
+6. Save and Queue the Pipeline:
+o Save the YAML script and queue the pipeline to run.
+7. Monitor the Pipeline Run:
+o Go to "Pipelines" -> "Builds" and view the pipeline execution details. You can see the
+build status, logs, and artifacts (if published).
+Inference
+• A successful pipeline run indicates that your Maven project has been built and artifacts
+(compiled code) are generated (if publishing is enabled).
+• The pipeline logs provide details about the build process and any potential errors.
+Result
+• You will have a functional CI/CD pipeline in Azure DevOps that automatically builds your
+Maven project upon code changes pushed to the repository (if connected) or manual
+execution.
+Lab Practical Solution: Run Regression Tests using Maven Build Pipeline in Azure
+Aim:
+This lab practical aims to demonstrate how to integrate regression test execution with a Maven
+build pipeline deployed in Azure DevOps.
+Procedure:
+1. Create an Azure DevOps Project
+o Login to Azure DevOps (https://azure.microsoft.com/en-us/products/devops) and
+create a new project or use an existing one.
+2. Define the Maven Build Pipeline
+o Go to Pipelines -> Releases and create a new pipeline.
+o Choose the template "Empty pipeline".
+o In the YAML editor, paste the following code:
+YAML
+stages:
+- stage: Build # Define a build stage
+ jobs:
+ - job: BuildTests # Define a job within the build stage
+ pool: # Define the agent pool to run the job on
+ vmImage: 'ubuntu-latest'
+ steps:
+ - script: mvn clean install # Run maven clean and install commands
+ displayName: 'Build and Install Tests'
+ - publish: $(System.DefaultWorkingDirectory)/target/*.jar # Publish the
+generated JAR file as artifact
+- stage: Test # Define a test stage
+ jobs:
+ - job: RunTests # Define a job within the test stage
+ dependsOn: Build # Define dependency on the Build stage
+ pool: # Define the agent pool to run the job on
+ vmImage: 'ubuntu-latest'
+ steps:
+ - download: $(Build.ArtifactStagingDirectory) # Download the JAR artifact from
+the Build stage
+ - script: mvn test # Run maven test command to execute regression tests
+ displayName: 'Run Regression Tests'
+ - publish: $(System.DefaultWorkingDirectory)/target/surefire-reports/*.xml #
+Publish test reports as artifacts
+Explanation:
+• The pipeline defines two stages: Build and Test.
+• The Build stage uses the mvn clean install command to build and install the project with
+its dependencies.
+• The Build stage publishes the generated JAR file as an artifact.
+• The Test stage depends on the successful completion of the Build stage.
+• The Test stage downloads the JAR artifact from the previous stage.
+• The Test stage runs the mvn test command to execute the regression tests.
+• The Test stage publishes the generated test reports (usually located in the
+target/surefire-reports directory) as artifacts.
+3. Run the Pipeline
+o Save the pipeline YAML file and queue a new pipeline run.
+o Monitor the pipeline execution in the Runs tab.
+Inference:
+A successful pipeline run indicates that the Maven build process executed without errors, the tests
+were downloaded and executed successfully, and the test reports were published as artifacts.
+Result:
+By examining the published test reports (usually in JUnit XML format), you can analyze the test
+results and identify any failing tests that require further investigation.
+Lab Practical: Install Jenkins in Cloud
+Aim
+The aim of this lab practical is to set up and configure Jenkins, an open-source automation server,
+in a cloud environment. This will enable you to automate the building, testing, and deployment of
+your applications.
+Procedure
+1. Choosing a Cloud Provider:
+• Select a cloud provider of your choice like Amazon Web Services (AWS), Microsoft Azure,
+or Google Cloud Platform (GCP). Each platform offers different options for deploying
+Jenkins.
+2. Instance Creation:
+• Launch a virtual machine (VM) instance in your chosen cloud platform. Ensure the VM
+meets the minimum requirements for Jenkins.
+• Configure the VM with an appropriate operating system (OS) like Ubuntu or CentOS.
+3. Install Java:
+• As Jenkins requires Java for execution, install the latest Java Development Kit (JDK) on
+your cloud VM following the provider's instructions.
+• Verify the Java installation by running java -version in the terminal.
+4. Download and Install Jenkins:
+• Download the latest LTS (Long Term Support) version of the Jenkins WAR file from the
+official Jenkins website https://www.jenkins.io/download/.
+• Transfer the WAR file to your cloud VM using a method like SCP or cloud storage.
+• Use the wget command to download the WAR file directly if allowed by your cloud
+provider's security settings.
+5. Configure Jenkins:
+• Start the Jenkins service using a command like java -jar jenkins.war (the actual
+command might differ based on your OS).
+• Access the Jenkins web interface by opening your web browser and navigating to
+http://<VM_IP_ADDRESS>:8080 (replace <VM_IP_ADDRESS> with your VM's IP address).
+• The initial setup will prompt you to unlock Jenkins using a randomly generated password
+located in the console output where Jenkins was started.
+6. Install Plugins (Optional):
+• Jenkins offers a vast library of plugins to extend its functionality.
+• Visit the "Manage Jenkins" -> "Plugins" section and browse/search for plugins relevant to
+your automation needs.
+• Install the desired plugins and restart Jenkins for them to take effect.
+7. Create a Sample Job (Optional):
+• To verify your Jenkins installation, create a simple job.
+• Go to "New Item" and choose a job type like "FreeStyle Project".
+• Configure the job to perform a basic task like executing a shell script or building a sample
+project.
+• Save the job and run it to test the Jenkins functionality.
+8. Secure Jenkins (Recommended):
+• Implement security measures to protect your Jenkins server. This may involve configuring
+user authentication, authorization, and network access controls.
+Inference
+By successfully completing this lab, you will have gained hands-on experience in deploying
+Jenkins in a cloud environment. This allows you to automate your software development lifecycle,
+improving efficiency and consistency.
+Result
+A functioning Jenkins server running in your cloud environment, ready to automate your build, test,
+and deployment pipelines. You should be able to access the Jenkins web interface and create
+jobs to manage your software development process.
+Lab Practical: Create a CI Pipeline Using Jenkins
+Aim
+This lab aims to establish a continuous integration (CI) pipeline using Jenkins. The pipeline will
+automate the build and test process for a sample software project upon code changes.
+Procedure
+1. Setting Up Jenkins:
+o Ensure you have a running Jenkins server. If not, download and install it from the
+official website https://www.jenkins.io/download/.
+o After installation, configure Jenkins by following the initial setup wizard.
+2. Creating a New Project:
+o Login to the Jenkins dashboard.
+o Click on "New Item" and select "Pipeline" from the options.
+o Provide a name for your project (e.g., "CI_Pipeline_Project").
+o Choose "Pipeline script from SCM" under the "Pipeline" section.
+3. Source Code Management (SCM) Configuration:
+o Select the SCM tool you're using (e.g., Git).
+o Enter the URL of your Git repository containing the sample project code.
+o Specify the branch name that triggers the pipeline execution (e.g., "main").
+o Leave the credentials section blank for now (we can add them later if needed).
+4. Defining the Pipeline Script (Jenkinsfile):
+o In the script editor, paste the following code (replace <path_to_your_project> with
+the actual path within your repository):
+Groovy
+pipeline {
+ agent any
+ stages {
+ stage('Checkout Code') {
+ steps {
+ git branch: '<branch_name>', credentialsId: '', url:
+'<repository_url>'
+ }
+ }
+ stage('Build Project') {
+ // Replace the following steps with your project-specific build
+commands
+ steps {
+ sh 'cd <path_to_your_project>'
+ sh './build.sh' // Assuming you have a build script named
+build.sh
+ }
+ }
+ stage('Run Tests') {
+ // Replace the following steps with your project-specific test
+commands
+ steps {
+ sh 'cd <path_to_your_project>'
+ sh './test.sh' // Assuming you have a test script named
+test.sh
+ }
+ }
+ }
+ post {
+ always {
+ archiveArtifacts artifacts: '**/*.log' // Archive logs from all
+stages
+ }
+ success {
+ // Optional: Send notifications on successful builds (e.g.,
+email)
+ }
+ failure {
+ // Optional: Send notifications on failed builds (e.g., email)
+ }
+ }
+}
+o Save the Jenkinsfile.
+5. Building the Pipeline:
+o Click on "Build Now" to trigger the initial pipeline execution. This will fetch the code
+from your repository and run the build and test stages.
+6. Monitoring and Verification:
+o Observe the pipeline execution progress on the Jenkins dashboard.
+o Each stage will display its status (Success/Failure).
+o Click on each stage to view the console output for detailed logs.
+o Verify if the build and tests passed successfully.
+7. Testing Code Changes:
+o Make a modification to your project code in the repository (e.g., fix a bug).
+o Push the changes to your remote repository branch.
+o Observe Jenkins automatically trigger a new pipeline run due to the code change
+detection.
+o Monitor the new build and ensure successful completion of all stages after your code
+changes.
+Inference
+By creating a CI pipeline with Jenkins, we achieve the following:
+• Automation: The build and test process becomes automated, eliminating manual
+intervention and reducing errors.
+• Faster Feedback: Developers receive quicker feedback on code changes, allowing for
+faster bug fixes and improvements.
+• Improved Quality: Automated testing helps identify and fix issues early in the development
+cycle, leading to better code quality.
+• Continuous Integration: Code changes are integrated frequently, minimizing code
+divergence and conflicts.
+Result
+This lab demonstrates the creation of a basic CI pipeline using Jenkins. You can customize the
+pipeline script further to integrate specific build tools, testing frameworks, and notification
+workflows based on your project requirements. By implementing CI, you establish a foundation for
+continuous development practices, leading to higher quality softwAare and faster releases.
+Lab Practical: CI/CD Pipeline with Jenkins and Cloud Deployment
+Aim
+This lab practical aims to establish a continuous delivery (CD) pipeline using Jenkins. The pipeline
+will automate the process of fetching code from a version control system (VCS), building the
+application, and deploying it to a cloud environment.
+Procedure
+1. Setting Up Jenkins
+• Install Jenkins on your system. You can find installation instructions for various platforms on
+the Jenkins website https://www.jenkins.io/download/.
+• Start and configure Jenkins according to your needs. This might involve setting up security
+measures and installing additional plugins.
+2. Configuring the Pipeline
+• In Jenkins, create a new pipeline job. You can choose between a freestyle project or a
+pipeline script. We'll use a pipeline script for this exercise.
+• Within the pipeline script editor, define the pipeline using Jenkins Pipeline DSL (Domain
+Specific Language). Here's an example script:
+Groovy
+pipeline {
+ agent any
+ stages {
+ stage('Checkout Code') {
+ steps {
+ git branch: 'main', credentialsId: 'github-credentials', url:
+'https://github.com/your-username/your-repo.git'
+ }
+ }
+ stage('Build Application') {
+ steps {
+ sh 'mvn clean install' // Replace with your build command (e.g.,
+npm install, etc.)
+ }
+ }
+ stage('Deploy to Cloud') {
+ steps {
+ // Deployment logic specific to your cloud provider (see examples
+below)
+ }
+ }
+ }
+}
+Explanation of the Script:
+• agent any: This specifies that the pipeline can run on any available Jenkins agent.
+• stages: This defines the different stages of the pipeline.
+o Checkout Code: This stage fetches code from the specified Git repository using
+credentials stored in Jenkins (replace github-credentials with your actual
+credential ID).
+o Build Application: This stage executes the build command specific to your project
+(e.g., mvn clean install for Maven projects).
+o Deploy to Cloud: This stage contains the deployment logic to your cloud platform
+(details in the next step).
+• You'll need to replace the placeholder commands with your project's specific build and
+deployment commands.
+3. Cloud Deployment Configuration
+This stage depends on your chosen cloud provider. Here are some examples:
+• AWS: Install the AWS plugin for Jenkins and configure credentials for accessing your AWS
+account. You can then use pipeline steps like aws s3 cp to upload build artifacts to S3
+buckets and utilize tools like AWS CodeDeploy for automated deployments to EC2
+instances or Elastic Beanstalk environments.
+• Azure: Install the Azure DevOps plugin for Jenkins and configure your Azure service
+connection. The pipeline can then leverage Azure CLI commands or pre-built functions
+within the plugin to deploy applications to Azure App Service, Azure Functions, or Virtual
+Machines.
+• Google Cloud Platform (GCP): Install the Google Cloud plugin for Jenkins and configure
+your GCP service account. The pipeline can utilize gcloud commands to deploy
+applications to Cloud Run, App Engine, or Compute Engine instances.
+4. Running the Pipeline
+• Save your pipeline script and configure the job in Jenkins.
+• Trigger the pipeline manually or set up triggers based on events like code commits to your
+VCS.
+• Jenkins will execute the pipeline stages sequentially. You can monitor the progress of each
+stage on the Jenkins dashboard.
+Inference
+By creating a CI/CD pipeline in Jenkins, you achieve several benefits:
+• Automation: Manual tasks like code retrieval, building, and deployment are automated,
+reducing human error and increasing efficiency.
+• Faster deployments: New code versions can be deployed to production quicker, enabling
+faster delivery cycles.
+• Improved consistency: The pipeline ensures a consistent build and deployment process
+across environments.
+• Early detection of issues: Build failures and errors are identified early in the pipeline,
+allowing for faster troubleshooting.
+Result
+A successful run of the pipeline should result in:
+• Code being fetched from the VCS repository.
+• The application being built successfully.
+• The application being deployed to the target cloud environment.
+• A confirmation message displayed on the Jenkins dashboard indicating successful
+deployment.
+Lab Practical: Ansible Playbook for Simple Web Application Infrastructure
+Aim
+This lab aims to create an Ansible playbook that automates the setup of a basic web application
+infrastructure. This includes installing and configuring a web server (Nginx) and deploying a static
+HTML webpage.
+Procedure
+1. Setting Up the Environment:
+• Install Ansible: Ensure Ansible is installed on your local machine. You can follow the
+official documentation for your operating system
+https://docs.ansible.com/ansible/latest/installation_guide/index.html.
+• Prepare Inventory File: Create a file named inventory in your project directory. This file
+lists the servers Ansible will manage. Here's an example:
+[webserver]
+server1.example.com
+Replace server1.example.com with the actual hostname or IP address of your web server.
+• Prepare Playbook File: Create another file named webserver.yml in your project
+directory. This file will contain the Ansible playbook.
+2. Building the Playbook:
+Open the webserver.yml file and paste the following content:
+YAML
+---
+- hosts: webserver
+ become: true
+ tasks:
+ # Update package lists
+ - name: Update package lists
+ apt: update_cache=yes
+ # Install Nginx web server
+ - name: Install Nginx web server
+ apt: name=nginx state=present
+ # Start Nginx service
+ - name: Start Nginx service
+ service: name=nginx state=started enabled=yes
+ # Create directory for web content
+ - name: Create directory for web content
+ file: path=/var/www/html state=directory
+ # Copy the index.html file
+ - name: Copy index.html file
+ copy:
+ src: index.html
+ dest: /var/www/html/index.html
+ owner: www-data
+ group: www-data
+ handlers:
+ # Restart Nginx on config changes
+ - name: Restart Nginx on config changes
+ service: name=nginx state=restarted
+ when: changed
+Explanation of the Playbook:
+• hosts: webserver: This line defines the group of servers the playbook will target (in this
+case, webserver from the inventory file).
+• become: true: This grants the user running the playbook root privileges on the target
+server.
+• Tasks: This section defines a series of tasks that Ansible will execute on the target
+server(s).
+o The first task updates the package lists on the server.
+o The second task installs the Nginx web server package.
+o The third task starts the Nginx service and ensures it automatically starts on boot.
+o The fourth task creates a directory /var/www/html to store the web content.
+o The fifth task copies a sample index.html file (not included here) to the created
+directory, setting ownership to www-data.
+• Handlers: This section defines actions triggered under specific conditions.
+o The handler restarts the Nginx service whenever a configuration change occurs
+(indicated by the when: changed condition).
+3. Deploying the Playbook:
+• Place the index.html file: Create a simple HTML file named index.html containing your
+desired content in your project directory.
+• Run the Playbook: Navigate to the directory containing the inventory and webserver.yml
+files. Execute the following command:
+ansible-playbook webserver.yml
+4. Verification:
+Once the playbook finishes execution, access your web server's IP address in a web browser. You
+should see the content of your index.html file displayed.
+Inference
+This lab demonstrates how Ansible can automate the setup and configuration of a basic web
+application infrastructure. By using playbooks, we can manage infrastructure in a repeatable and
+consistent manner.
+Here are some key takeaways:
+• Ansible uses YAML syntax for defining playbooks.
+• Playbooks define tasks to be executed on target servers.
+• Roles can be created to group related tasks for reusability.
+• Inventory files define the target servers managed by Ansible.
+• Variables can be used to store values and customize playbooks.
+Result
+This lab provides a foundational understanding of using Ansible for web application infrastructure
+automation. With further exploration, you can learn to deploy more complex applications, manage
+configurations, and automate various infrastructure tasks.
+Lab Practical: Build a Simple Application using Gradle
+Aim
+This lab aims to introduce you to Gradle, a powerful build automation tool for Java projects. By
+building a simple application, you'll gain hands-on experience with Gradle's core functionalities like
+project creation, dependency management, and task execution.
+Procedure
+1. Setting Up the Environment
+• Ensure you have Java (version 8 or above) installed on your system. You can verify this by
+running java -version in your terminal.
+• Download and install an IDE that supports Gradle plugins, such as IntelliJ IDEA or Eclipse.
+2. Creating a Gradle Project
+• Open your terminal and navigate to your desired project directory.
+• Run the following command to initialize a new Gradle project:
+gradle init --type java-application
+This command will prompt you for some configuration options. Choose the following:
+• Project type: Application
+• Implementation language: Java
+• Source compatibility: Choose a compatible Java version based on your system (e.g.,
+Java 17)
+Gradle will generate the essential project structure with a build.gradle file containing the build
+configuration.
+3. Writing the Application Code (Simple Greeter)
+• Inside the src/main/java directory, create a package named com.example.myapp (or your
+preferred package name).
+• Within the package, create a new Java class named Greeter.java.
+• Add the following code to Greeter.java:
+Java
+package com.example.myapp;
+public class Greeter {
+ public static void main(String[] args) {
+ System.out.println("Hello, World!");
+ }
+}
+This simple code defines a Greeter class with a main method that prints "Hello, World!" to the
+console.
+4. Configuring Dependencies (Optional)
+• Gradle allows you to manage external libraries your application depends on. For instance, if
+you wanted to use a logging library, you could add it to the build.gradle file:
+Gradle
+dependencies {
+ implementation 'org.slf4j:slf4j-api:1.8.0-beta4'
+ runtimeOnly 'org.slf4j:slf4j-simple:1.8.0-beta4'
+}
+This snippet defines two dependencies:
+• slf4j-api: The core logging API
+• slf4j-simple: A simple logging implementation
+5. Building and Running the Application
+• Open a terminal in your project directory.
+• Execute the following Gradle task to compile your Java code:
+gradle build
+This task will compile the source code and create an executable JAR file (usually located in
+build/libs).
+• Run your application using the generated JAR:
+java -jar build/libs/your-application-name.jar
+Replace your-application-name.jar with the actual name of your JAR file.
+6. Exploring Gradle Tasks
+Gradle offers various built-in tasks that automate different stages of the development process.
+Here are some commonly used tasks:
+• clean: Deletes generated files like compiled classes and JARs.
+• assemble: Builds your application, including compilation and packaging.
+• run: Executes your application's main method.
+You can explore these tasks by running gradle tasks in your terminal. The output will list all
+available tasks and their descriptions.
+7. Additional Considerations
+• Gradle allows writing custom build scripts to automate complex tasks. Explore the Gradle
+documentation for details on advanced build customization.
+• Gradle integrates seamlessly with version control systems like Git, allowing you to manage
+build configurations alongside your source code.
+Inference
+By completing this lab, you've gained practical experience with Gradle's core functionalities:
+• Project Creation: Gradle simplifies project setup with pre-defined configurations for
+common project types like Java applications.
+• Dependency Management: Gradle handles external libraries your application relies on,
+ensuring consistent versions and resolving conflicts.
+• Task Automation: Gradle provides built-in and custom tasks to automate repetitive tasks
+like compiling, building, and testing your application.
+This lab has laid the groundwork for you to explore Gradle's vast capabilities in managing complex
+build processes and integrating with continuous integration and delivery (CI/CD) pipelines for
+efficient software development.
+Result
+This lab has successfully demonstrated how to build a simple Java application using Gradle.
+You've created a project structure, written application code, configured dependencies (optional),
+built and run the application, and explored some essential Gradle tasks.
+Lab Practical: Ansible Installation, Roles, and Playbooks
+Aim:
+This lab practical aims to equip you with the skills to install and configure Ansible, a popular IT
+automation tool. You will learn how to create roles for modular code reuse and write playbooks,
+the core automation units in Ansible.
+Procedure:
+1. Setting Up the Environment
+• Control Node: Choose a machine to act as your Ansible control node. This is where you
+will install Ansible and manage your infrastructure. Ensure the control node has a non-root
+user with sudo privileges.
+• Managed Nodes: Identify the machines you want to manage with Ansible (servers, network
+devices, etc.). These are referred to as managed nodes. Configure passwordless SSH
+access from the control node to each managed node. This allows Ansible to execute tasks
+without manual intervention.
+2. Installing Ansible
+On your control node, follow the installation instructions specific to your operating system.
+• For Debian/Ubuntu:
+Bash
+sudo apt update
+sudo apt install ansible
+• For Red Hat/CentOS (Requires EPEL repository):
+Bash
+sudo yum install epel-release
+sudo yum install ansible
+3. Verifying Installation
+Once installed, run the following command to verify the Ansible version:
+Bash
+ansible --version
+4. Creating an Inventory File
+An inventory file defines the managed nodes Ansible will interact with. There are several formats,
+but a simple static inventory is a good starting point. Create a file named hosts (or any preferred
+name) in the /etc/ansible directory with the following structure:
+[group_name] # Define a group of managed nodes
+managed_node1.example.com
+managed_node2.example.com
+[another_group] # Define another group (optional)
+other_node1.example.com
+5. Writing Your First Playbook
+Playbooks are YAML files that define the tasks Ansible will execute on managed nodes. Create a
+new file named sample_playbook.yml in your preferred working directory. Here's a basic
+example:
+YAML
+---
+- name: Install Apache Web Server # Play name
+ hosts: all # Target all hosts in the inventory
+ become: true # Use sudo privileges for tasks
+ tasks:
+ - name: Install Apache package
+ apt: # Use the apt module for Debian/Ubuntu
+ name: apache2
+ state: present
+Explanation of the Playbook:
+• ---: YAML document start marker
+• - name: Install Apache Web Server: Defines the play name (optional but descriptive)
+• hosts: all: Specifies the target group from the inventory (here, all)
+• become: true: Grants sudo privileges for tasks within the play
+• tasks:: Defines the tasks to be executed
+o - name: Install Apache package: Defines a task with a descriptive name
+▪ apt:: Uses the apt module for package management (adjust for other
+systems)
+▪ name: apache2: Specifies the package to install
+▪ state: present: Ensures the package is installed
+6. Running the Playbook
+Navigate to the directory containing your playbook and run the following command:
+Bash
+ansible-playbook sample_playbook.yml
+This will attempt to install Apache on all managed nodes listed in the all group of your inventory.
+7. Creating Ansible Roles (Optional)
+Ansible roles provide a way to modularize your configuration code. A role encapsulates tasks,
+variables, and files related to a specific configuration area (e.g., web server setup, database
+configuration).
+Here's a basic structure for an Ansible role:
+roles/
+ my_web_server/
+ defaults/ # Contains default variables for the role
+ tasks/ # Contains task files for the role
+ vars/ # Contains additional variables specific to the role
+ handlers/ # Contains handler tasks (optional)
+ meta/ # Contains role metadata (optional)
+8. Conclusion
+This lab practical provided a foundational understanding of Ansible installation, roles, and
+playbooks. You can now leverage Ansible to automate various IT tasks, improving efficiency and
+consistency in your infrastructure management.
+Inference:
+• Ansible offers a powerful and agentless approach to infrastructure automation.
+• Playbooks provide a declarative way to define desired configurations.
+• Roles enable code reuse and improve maintainability of complex configurations.
+Result:
+By successfully completing this lab, you will have achieved the following:
+• Installed Ansible on your control node: You will have verified the installation using
+the ansible --version command.
+• Created an inventory file: This file defines the managed nodes Ansible can interact with,
+allowing you to target specific groups of machines for configuration changes.
+• Written a basic playbook: You will have created a YAML file outlining the tasks Ansible
+executes on managed nodes. The example playbook demonstrated installing the Apache
+web server.
+• Successfully executed a playbook: Running ansible-playbook sample_playbook.yml will
+attempt to install Apache on all managed nodes listed in the all group of your inventory.
+Verifying the installation on managed nodes confirms successful Ansible execution.
+• (Optional) Gained an understanding of Ansible roles: The lab introduced the concept of
+roles for modularizing configuration code. You learned about the basic directory structure of
+an Ansible role.
+This practical exercise equips you with the foundational skills to leverage Ansible for automating IT
+tasks across your infrastructure. As you gain experience, you can create more complex playbooks,
+utilize roles effectively, and explore advanced features like variables, conditionals, and loops to
+automate a wider range of configurations.
